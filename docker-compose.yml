@@ -19,8 +19,8 @@ services:
       - PLEX_ROOT_FOLDER=/media
       # the file ending naming scheme
       - FILE_ENDING_PATTERN=meta_data_naming_scheme
-      # when the job should run
-      - CRON_STRING=*/15 * * * *
+      # when the job should run at 05:00 once a week
+      - CRON_STRING=* 5 * * */7
       # if you want to run run the whole script only once, override CMD with "once"
       # command: once
       # if you want to clean up all meta_data files, ovverride CMD with "cleanup"
