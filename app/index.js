@@ -51,8 +51,9 @@ const createFetchImageUrl = (imagePath) => `${plexAddress}${imagePath}?X-Plex-To
 
         // export every item of a section
         for (const sectionItem of metaData) {
-            if (itemCount!=0 ) {
-                console.log("progress " + ++itemCount + " of " + metaData.length + " - " + (Math.floor((itemCount - 1) / metaData.length * 10000) / 100) + "%");
+            ++itemCount
+            if (itemCount>0 && itemCount % 10 == 0) {
+                console.log("progress " + itemCount + " of " + metaData.length + " - " + (Math.floor((itemCount - 1) / metaData.length * 10000) / 100) + "%");
             }
             await fetchSectionItem(sectionItem.ratingKey);
         }
