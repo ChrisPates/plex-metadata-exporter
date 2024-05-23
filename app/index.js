@@ -51,7 +51,9 @@ const createFetchImageUrl = (imagePath) => `${plexAddress}${imagePath}?X-Plex-To
 
         // export every item of a section
         for (const sectionItem of metaData) {
-            console.log("-------------- Exporting item " + ++itemCount + " of " + metaData.length + " - " + (Math.floor((itemCount - 1) / metaData.length * 10000) / 100) + "% of this section exported");
+            if (itemCount!=0 ) {
+                console.log("progress " + ++itemCount + " of " + metaData.length + " - " + (Math.floor((itemCount - 1) / metaData.length * 10000) / 100) + "%");
+            }
             await fetchSectionItem(sectionItem.ratingKey);
         }
     }
@@ -66,9 +68,7 @@ async function fetchLibrarySections() {
 
     const mediaContainer = json.MediaContainer;
 
-    console.log('------ Library title: ' + mediaContainer.title1);
-    console.log('------ Library count: ' + mediaContainer.size);
-    console.log('------ Logs: ');
+    console.log('Library Section: ' + mediaContainer.title1 + '(' + + mediaContainer.size + ' items)');
 
     // write response to root-folder
     await fs.writeFile(plexRootFolder + "/" + mediaContainer.title1 + "-plex-library-" + fileEndingPattern + ".json", JSON.stringify(json));
@@ -79,16 +79,12 @@ async function fetchLibrarySections() {
 
 // fetches and writes sections
 async function fetchLibrarySection(libraryDirectory) {
-    console.log('---------- Fetching data of the first library with librarySection: ' + libraryDirectory.key);
-
     const json = (await axios.get(createFetchSectionUrl(libraryDirectory.key), jsonOptions)).data;
     const xml = (await axios.get(createFetchSectionUrl(libraryDirectory.key), xmlOptions)).data;
 
     const mediaContainer = json.MediaContainer;
 
-    console.log('------------ Section title: ' + mediaContainer.title1);
-    console.log('------------ Section size: ' + mediaContainer.size);
-    console.log('------------ Logs:');
+    console.log('Library Section: ' + mediaContainer.title1 + '(' + + mediaContainer.size + ' items)');
 
     for (const location of libraryDirectory.Location) {
         await fs.writeFile(plexRootFolder + location.path + "/" + mediaContainer.title1 + "-plex-section-" + fileEndingPattern + ".json", JSON.stringify(json));
@@ -100,23 +96,18 @@ async function fetchLibrarySection(libraryDirectory) {
 
 // fetches and decides item type
 async function fetchSectionItem(ratingKey) {
-    console.log('---------------- Fetching item with ratingKey: ' + ratingKey);
-
     const json = (await axios.get(createFetchMetaDataUrl(ratingKey), jsonOptions)).data;
     const xml = (await axios.get(createFetchMetaDataUrl(ratingKey), xmlOptions)).data;
 
     for (const item of json.MediaContainer.Metadata) {
-        console.log('------------------ Item title: ' + item.title);
-        console.log('------------------ Item type: ' + item.type);
-        console.log('------------------ Item ratingKey: ' + item.ratingKey);
-        console.log('------------------ Logs: ');
+        console.log('- ' + item.librarySectionTitle + ' | ' + item.title);
 
         if (item.type === 'movie') {
             await fetchItem(item, json, xml, 'movie');
         } else if (item.type === 'show') {
             await fetchShow(item, json, xml);
         } else {
-            console.log('------------------ **** Unrecognized item type: ' + item.type);
+            console.error('------------------ **** Unrecognized item type: ' + item.type);
         }
     }
 }
@@ -157,7 +148,8 @@ async function fetchShow(item, json, xml) {
 
     // try to fetch children for show - maybe unnecessary because empty shows will be removed from Plex
     try {
-        console.log('------------------ Fetching children for show: ' + item.title);
+        console.log('- ' + item.librarySectionTitle + ' | ' + item.title);
+
         const childrenJson = (await axios.get(createFetchChildrenMetaDataUrl(item.ratingKey), jsonOptions)).data;
 
         for (const season of childrenJson.MediaContainer.Metadata) {
@@ -166,8 +158,9 @@ async function fetchShow(item, json, xml) {
     } catch (error) {
         // if children are not available, a 400 is returned by Plex
         if (error && error.response && error.response.status === 400) {
-            console.log('**** Show does not have children: ' + item.title);
+            console.error('Show does not have children: ' + item.title);
         } else {
+            console.error(error);
             throw error;
         }
     }
@@ -181,7 +174,7 @@ async function fetchSeason(ratingKey) {
     for (const item of json.MediaContainer.Metadata) {
         // try to fetch children for season - maybe unnecessary because empty seasons will be removed from Plex
         try {
-            console.log('------------------ Fetching children for season: ' + item.title);
+            console.log('  - ' + item.librarySectionTitle + ' | ' + item.parentTitle + ' - S' + item.index.toString().padStart(2, '0') + ' - ' + item.title);
 
             const children = (await axios.get(createFetchChildrenMetaDataUrl(item.ratingKey), jsonOptions)).data;
 
@@ -216,8 +209,9 @@ async function fetchSeason(ratingKey) {
         } catch (error) {
             // if children are not available, a 400 is returned by Plex
             if (error && error.response && error.response.status === 400) {
-                console.log('**** Season does not have children: ' + seasonItem.title);
+                console.error('**** Season does not have children: ' + seasonItem.title);
             } else {
+                console.error(error);
                 throw error;
             }
         }
@@ -232,10 +226,7 @@ async function fetchEpisode(ratingKey) {
     const metaData = json.MediaContainer.Metadata;
 
     for (const item of metaData) {
-        console.log('------------------------ Item title: ' + item.title);
-        console.log('------------------------ Item type: ' + item.type);
-        console.log('------------------------ Item ratingKey: ' + item.ratingKey);
-        console.log('------------------------ Logs: ');
+        console.log('   - ' + item.librarySectionTitle + ' | ' + item.grandparentTitle + ' - S' + item.parentIndex.toString().padStart(2, '0') + 'E' + item.index.toString().padStart(2, '0') + ' - ' + item.title);
 
         await fetchItem(item, json, xml, 'episode');
     }
