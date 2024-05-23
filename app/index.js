@@ -1,6 +1,9 @@
 require('dotenv').config();
 
 const axios = require('axios');
+const axiosRetry = require('axios-retry').default;
+axiosRetry(axios, { retries: 3 });
+
 const fs = require('fs').promises;
 const fsSync = require('fs');
 
