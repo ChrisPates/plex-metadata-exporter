@@ -9,7 +9,7 @@
   "author": "Leonhard Esterbauer",
   "license": "MIT",
   "dependencies": {
-    "axios": "^0.20.0",
+    "axios": "^1.7.2",
     "axios-retry": "^4.3.0",
     "dotenv": "^8.2.0"
   }
